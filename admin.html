@@ -22,6 +22,7 @@ button,.btn{display:inline-flex;align-items:center;min-height:48px;padding:0 18p
 </style>
 <div id="login" hidden><h2>Entrar</h2><label>Correo</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><div class="row"><button id="go">Entrar</button></div></div>
 <div id="ed" hidden>
+<div id="err" hidden style="background:#b3262b;color:#fff;padding:12px 20px;font-weight:600"></div>
 <header><b>24 cartas · Editor</b><span><span id="st">Guardado</span> <button class="alt" id="pv">Vista previa</button> <button class="alt" id="out">Salir</button></span></header>
 <div class="wrap">
 <aside><h3>Para quién es</h3>
@@ -47,20 +48,28 @@ button,.btn{display:inline-flex;align-items:center;min-height:48px;padding:0 18p
 const sb=supabase.createClient(CFG.url,CFG.key),$=i=>document.getElementById(i);
 const F=['recipient','sender','welcome','style','color','year','card24','pin','email_to','admin_email','site_url'];
 let S={},L={},cur=1,tm,mr,ch=[];
-const st=t=>$('st').textContent=t, has=x=>x&&(x.body||x.photo||x.audio);
+const err=t=>{$('err').textContent=t;$('err').hidden=!t},st=t=>$('st').textContent=t, has=x=>x&&(x.body||x.photo||x.audio);
 async function init(){
   const {data:{session}}=await sb.auth.getSession();
   $('login').hidden=!!session;$('ed').hidden=!session;if(!session)return;
-  S=(await sb.from('settings').select('*').single()).data;
-  (await sb.from('letters').select('*')).data.forEach(x=>L[x.day]=x);
-  F.forEach(f=>$(f).value=S[f]??'');show(cur);
+  nav();
+  try{
+    let r=await sb.from('settings').select('*').eq('id',1).maybeSingle();
+    if(r.error)throw r.error;
+    if(!r.data){r=await sb.from('settings').upsert({id:1}).select().single();if(r.error)throw r.error}
+    S=r.data;
+    const l=await sb.from('letters').select('*');if(l.error)throw l.error;
+    l.data.forEach(x=>L[x.day]=x);
+    F.forEach(f=>$(f).value=S[f]??'');
+  }catch(e){err('No se pudieron cargar los datos: '+(e.message||e)+'. Revisa que ejecutaste el SQL entero en Supabase.')}
+  show(cur);
 }
 $('go').onclick=async()=>{const {error}=await sb.auth.signInWithPassword({email:$('em').value,password:$('pw').value});error?alert(error.message):init()};
 $('out').onclick=async()=>{await sb.auth.signOut();location.reload()};
-F.forEach(f=>$(f).onchange=async()=>{const v=f=='year'?+$(f).value:$(f).value;S[f]=v;st('Guardando…');const {error}=await sb.from('settings').update({[f]:v}).eq('id',1);st(error?error.message:'Guardado')});
+F.forEach(f=>$(f).onchange=async()=>{const v=f=='year'?+$(f).value:$(f).value;S[f]=v;st('Guardando…');const {error}=await sb.from('settings').upsert({id:1,[f]:v});st(error?error.message:'Guardado')});
 function nav(){$('days').innerHTML='';for(let d=1;d<=24;d++){const b=document.createElement('button');b.textContent=d;b.className=(has(L[d])?'on ':'')+(d==cur?'cur':'');b.onclick=()=>show(d);$('days').append(b)}}
 function show(d){cur=d;const r=L[d]=L[d]||{day:d};$('dt').textContent=d+' de diciembre';$('body').value=r.body||'';
-  $('ph').innerHTML=r.photo?`<img src="${media(r.photo)}">`:'';$('au').innerHTML=r.audio?`<audio controls src="${media(r.audio)}"></audio>`:'';nav()}
+  $('ph').innerHTML=r.photo?`<img src="${media(r.photo)}" onerror="this.replaceWith('⚠️ No se puede cargar la foto (¿el bucket media es público?)')">`:'';$('au').innerHTML=r.audio?`<audio controls src="${media(r.audio)}"></audio>`:'';nav()}
 async function saveL(){st('Guardando…');const r=L[cur];const {error}=await sb.from('letters').upsert({day:cur,body:r.body||'',photo:r.photo||null,audio:r.audio||null});st(error?error.message:'Guardado');nav()}
 $('body').oninput=()=>{L[cur].body=$('body').value;clearTimeout(tm);tm=setTimeout(saveL,800)};
 async function up(blob,ext){const p=`${crypto.randomUUID()}.${ext}`;const {error}=await sb.storage.from('media').upload(p,blob,{contentType:blob.type});if(error){alert(error.message);throw error}return p}
@@ -76,7 +85,7 @@ $('rec').onclick=async()=>{
   mr.ondataavailable=e=>ch.push(e.data);
   mr.onstop=()=>{s.getTracks().forEach(t=>t.stop());$('rec').textContent='Grabar ahora';setAudio(new Blob(ch,{type:mr.mimeType}))};
   mr.start();$('rec').textContent='Parar y guardar'};
-$('pv').onclick=()=>{$('prev').hidden=false;renderCalendar($('pm'),{s:S,l:Object.values(L).filter(has)})};
+$('pv').onclick=()=>{$('prev').hidden=false;renderCalendar($('pm'),{s:S||{},l:Object.values(L).filter(has)})};
 $('cl').onclick=()=>$('prev').hidden=true;
 $('tst').onclick=async()=>{const {data:{session}}=await sb.auth.getSession();st('Enviando prueba…');
   try{const r=await fetch(CFG.mailUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({token:session.access_token,day:cur})});
