@@ -1,0 +1,85 @@
+<!doctype html><html lang="es"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Editor · 24 cartas</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+body{margin:0;background:#12302b;color:#f6ecde;font:17px Fraunces,Georgia,serif;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 20px}
+.wrap{display:grid;grid-template-columns:320px 1fr;gap:20px;padding:0 20px 40px;max-width:1300px;margin:auto}
+@media(max-width:800px){.wrap{grid-template-columns:1fr}}
+aside,section,#login{background:#fdf8ee;color:#2a2018;border-radius:16px;padding:20px}
+#login{max-width:420px;margin:15vh auto}
+label{display:block;font-weight:600;margin:12px 0 4px}label.btn{margin:0}
+input,select,textarea{width:100%;font:inherit;font-size:17px;padding:12px;border:1px solid #0003;border-radius:10px;background:#fff}
+textarea{min-height:240px;font:600 27px/1.6 Caveat,cursive}
+button,.btn{display:inline-flex;align-items:center;min-height:48px;padding:0 18px;border:0;border-radius:24px;background:#b3262b;color:#fff;font:600 17px Fraunces,serif;cursor:pointer}
+.alt{background:#0001;color:#2a2018}header .alt{background:#fff2;color:#fff}
+.days{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;margin-bottom:16px}
+.days button{padding:0;justify-content:center;border-radius:10px;background:#0001;color:#2a2018}.days .on{background:#2f7d5b;color:#fff}.days .cur{outline:3px solid #b3262b}
+.row{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}.box{border:1px solid #0002;border-radius:12px;padding:12px;margin-top:14px}
+.box img{max-width:100%;max-height:260px;display:block;margin-bottom:10px;border-radius:8px}.box audio{width:100%;margin-bottom:10px}
+#prev{position:fixed;inset:0;overflow:auto;z-index:9;background:#000}#cl{position:fixed;top:max(12px,env(safe-area-inset-top));right:12px;z-index:10}
+</style>
+<div id="login" hidden><h2>Entrar</h2><label>Correo</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><div class="row"><button id="go">Entrar</button></div></div>
+<div id="ed" hidden>
+<header><b>24 cartas · Editor</b><span><span id="st">Guardado</span> <button class="alt" id="pv">Vista previa</button> <button class="alt" id="out">Salir</button></span></header>
+<div class="wrap">
+<aside><h3>Para quién es</h3>
+<label>Su nombre</label><input id="recipient"><label>Tu nombre</label><input id="sender">
+<label>Palabras de bienvenida</label><input id="welcome">
+<label>Estilo</label><select id="style"><option value="noche">Noche estrellada</option><option value="kraft">Papel kraft</option><option value="liso">Liso</option></select>
+<label>Color</label><select id="color"><option value="rojo">Rojo</option><option value="verde">Verde</option><option value="azul">Azul</option></select>
+<label>Año del calendario</label><input id="year" type="number"><label>Carta 24</label><select id="card24"><option value="lazo">Con lazo</option><option value="dorada">Dorada</option><option value="lacre">Sello de lacre</option></select><label>PIN para abrir la web (opcional)</label><input id="pin" inputmode="numeric" autocomplete="off">
+<label>Correo de ella/él (recibe los diarios)</label><input id="email_to" type="email">
+<label>Tu correo (para las pruebas)</label><input id="admin_email" type="email">
+<label>Dirección de la web (https://…)</label><input id="site_url"></aside>
+<section><div class="days" id="days"></div>
+<h2 id="dt"></h2><textarea id="body" placeholder="Escríbelo como si fuera a mano…"></textarea>
+<div class="box"><b>Foto</b><div id="ph"></div><label class="btn">Añadir foto<input id="pf" type="file" accept="image/*" hidden></label> <button class="alt" id="pd">Quitar</button></div>
+<div class="box"><b>Nota de voz</b> <small>(graba desde el iPad/Safari para que suene en todos los dispositivos)</small><div id="au"></div>
+<button id="rec">Grabar ahora</button> <label class="btn alt">Subir audio<input id="af" type="file" accept="audio/*" hidden></label> <button class="alt" id="ad">Quitar</button></div>
+<div class="row"><button id="tst">Enviarme este día de prueba por correo</button></div></section>
+</div></div>
+<div id="prev" hidden><button id="cl">Cerrar vista previa</button><main id="pm"></main></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script><script src="calendar.js"></script>
+<script>
+const sb=supabase.createClient(CFG.url,CFG.key),$=i=>document.getElementById(i);
+const F=['recipient','sender','welcome','style','color','year','card24','pin','email_to','admin_email','site_url'];
+let S={},L={},cur=1,tm,mr,ch=[];
+const st=t=>$('st').textContent=t, has=x=>x&&(x.body||x.photo||x.audio);
+async function init(){
+  const {data:{session}}=await sb.auth.getSession();
+  $('login').hidden=!!session;$('ed').hidden=!session;if(!session)return;
+  S=(await sb.from('settings').select('*').single()).data;
+  (await sb.from('letters').select('*')).data.forEach(x=>L[x.day]=x);
+  F.forEach(f=>$(f).value=S[f]??'');show(cur);
+}
+$('go').onclick=async()=>{const {error}=await sb.auth.signInWithPassword({email:$('em').value,password:$('pw').value});error?alert(error.message):init()};
+$('out').onclick=async()=>{await sb.auth.signOut();location.reload()};
+F.forEach(f=>$(f).onchange=async()=>{const v=f=='year'?+$(f).value:$(f).value;S[f]=v;st('Guardando…');const {error}=await sb.from('settings').update({[f]:v}).eq('id',1);st(error?error.message:'Guardado')});
+function nav(){$('days').innerHTML='';for(let d=1;d<=24;d++){const b=document.createElement('button');b.textContent=d;b.className=(has(L[d])?'on ':'')+(d==cur?'cur':'');b.onclick=()=>show(d);$('days').append(b)}}
+function show(d){cur=d;const r=L[d]=L[d]||{day:d};$('dt').textContent=d+' de diciembre';$('body').value=r.body||'';
+  $('ph').innerHTML=r.photo?`<img src="${media(r.photo)}">`:'';$('au').innerHTML=r.audio?`<audio controls src="${media(r.audio)}"></audio>`:'';nav()}
+async function saveL(){st('Guardando…');const r=L[cur];const {error}=await sb.from('letters').upsert({day:cur,body:r.body||'',photo:r.photo||null,audio:r.audio||null});st(error?error.message:'Guardado');nav()}
+$('body').oninput=()=>{L[cur].body=$('body').value;clearTimeout(tm);tm=setTimeout(saveL,800)};
+async function up(blob,ext){const p=`${crypto.randomUUID()}.${ext}`;const {error}=await sb.storage.from('media').upload(p,blob,{contentType:blob.type});if(error){alert(error.message);throw error}return p}
+const shrink=f=>new Promise(r=>{const i=new Image();i.onload=()=>{const k=Math.min(1,1600/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);c.toBlob(r,'image/jpeg',.85)};i.src=URL.createObjectURL(f)});
+$('pf').onchange=async e=>{const f=e.target.files[0];if(!f)return;st('Subiendo foto…');L[cur].photo=await up(await shrink(f),'jpg');await saveL();show(cur)};
+$('pd').onclick=async()=>{L[cur].photo=null;await saveL();show(cur)};
+async function setAudio(b){if(b.size>12e6)return alert('Audio demasiado grande (máx. 12 MB)');const t=b.type;const ext=t.includes('webm')?'webm':t.includes('mpeg')?'mp3':t.includes('wav')?'wav':'m4a';st('Subiendo audio…');L[cur].audio=await up(b,ext);await saveL();show(cur)}
+$('af').onchange=e=>e.target.files[0]&&setAudio(e.target.files[0]);
+$('ad').onclick=async()=>{L[cur].audio=null;await saveL();show(cur)};
+$('rec').onclick=async()=>{
+  if(mr&&mr.state=='recording')return mr.stop();
+  const s=await navigator.mediaDevices.getUserMedia({audio:true});mr=new MediaRecorder(s);ch=[];
+  mr.ondataavailable=e=>ch.push(e.data);
+  mr.onstop=()=>{s.getTracks().forEach(t=>t.stop());$('rec').textContent='Grabar ahora';setAudio(new Blob(ch,{type:mr.mimeType}))};
+  mr.start();$('rec').textContent='Parar y guardar'};
+$('pv').onclick=()=>{$('prev').hidden=false;renderCalendar($('pm'),{s:S,l:Object.values(L).filter(has)})};
+$('cl').onclick=()=>$('prev').hidden=true;
+$('tst').onclick=async()=>{const {data:{session}}=await sb.auth.getSession();st('Enviando prueba…');
+  try{const r=await fetch(CFG.mailUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({token:session.access_token,day:cur})});
+  const t=await r.text();st('Guardado');alert(t=='ok'?'Prueba enviada a '+S.admin_email:'Error: '+t)}catch(e){st('Guardado');alert('No se pudo contactar con el script de correo. Revisa mailUrl en config.js.')}};
+init();
+</script>

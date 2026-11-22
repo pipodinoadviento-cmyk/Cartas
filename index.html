@@ -1,0 +1,24 @@
+<!doctype html><html lang="es"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><title>24 cartas</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<main id="app" class="cal"></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script><script src="calendar.js"></script>
+<script>
+const sb=supabase.createClient(CFG.url,CFG.key);
+async function load(p){
+  const {data,error}=await sb.rpc('public_calendar',{p:p||null});
+  if(error||!data){app.textContent='No se pudo cargar el calendario.';return}
+  if(data.pin)return askPin(!!p);
+  if(p)localStorage.setItem('pin',p);
+  renderCalendar(app,data);
+}
+function askPin(bad){
+  app.className='cal';
+  app.innerHTML=`<h1>Calendario protegido</h1><p class="sub">${bad?'PIN incorrecto. Prueba otra vez.':'Escribe el PIN que te han dado.'}</p><form class="pin"><input inputmode="numeric" autocomplete="off" aria-label="PIN"><button>Abrir</button></form>`;
+  app.querySelector('form').onsubmit=e=>{e.preventDefault();localStorage.removeItem('pin');load(app.querySelector('input').value.trim())};
+}
+load(localStorage.getItem('pin'));
+</script>
