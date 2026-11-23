@@ -1,0 +1,116 @@
+<!doctype html><html lang="es"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Descubre el PIN</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}html{background:#101a1f}
+body{margin:0;min-height:100dvh;background:#101a1f;color:#f6ecde;font:20px/1.4 Fraunces,Georgia,serif;text-align:center;padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+h1{font-size:clamp(30px,5vw,54px);margin:.3em 0 .1em}h2{font-size:clamp(24px,3.6vw,36px);margin:.2em 0 .6em}p{margin:.3em 0}.big{font-size:clamp(22px,3.6vw,34px)}
+button{border:0;background:none;font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+#pin{display:flex;gap:10px;justify-content:center;margin:18px 0 28px}
+#pin span{width:clamp(44px,8vw,72px);height:clamp(56px,10vw,88px);border-radius:12px;background:#fff1;border:2px dashed #fff4;display:grid;place-items:center;font:700 clamp(30px,6vw,52px) Fraunces,serif}
+#pin span.on{background:#b3262b;border:2px solid #b3262b;animation:pop .5s}
+@keyframes pop{50%{transform:scale(1.3)}}
+.game{max-width:760px;margin:0 auto}
+.map{height:clamp(220px,38vh,340px);border-radius:24px;display:grid;place-items:center;align-content:center;box-shadow:0 8px 30px #0008;position:relative;overflow:hidden;color:#fff}
+.map::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(45deg,#fff1 0 20px,#0000 20px 40px)}
+.map .ico{font-size:clamp(90px,16vw,150px);filter:drop-shadow(0 6px 0 #0004);position:relative;z-index:1}
+.map b{font-size:clamp(28px,5vw,48px);letter-spacing:.06em;text-shadow:0 3px 0 #0005;position:relative;z-index:1}
+.map.pick{animation:pick .45s 3}@keyframes pick{50%{transform:scale(1.07) rotate(-1.5deg)}}
+.grid{display:grid;gap:12px}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g5{grid-template-columns:repeat(5,1fr)}
+.card,.cell{aspect-ratio:1;border-radius:16px;background:#fff2;font-size:clamp(40px,9vw,80px);display:grid;place-items:center;align-content:center}
+.card{font-size:clamp(34px,7vw,64px)}.cell{font-size:clamp(16px,calc(52vw/var(--n)),54px);aspect-ratio:1;border-radius:10px;transition:opacity .12s}.card small{font:700 clamp(20px,3vw,30px) Fraunces,serif;visibility:hidden}
+.card.show small,.card.ok small{visibility:visible}.card.ok{background:#2f7d5b}
+.tbar{height:10px;border-radius:5px;background:#fff2;margin:8px 0 16px;overflow:hidden}.tbar i{display:block;height:100%;width:100%;background:#e8c766}
+.field{position:relative;height:clamp(280px,46vh,440px);background:#fff1;border-radius:16px;overflow:hidden}
+.fl{position:absolute;font-size:72px;padding:12px;transition:left .2s,top .2s}
+.bar{position:relative;height:64px;background:#fff2;border-radius:32px;margin:34px 0;overflow:hidden}
+.zone{position:absolute;top:0;bottom:0;background:#2f7d5b}
+.mk{position:absolute;top:0;bottom:0;width:10px;margin-left:-5px;background:#fff;border-radius:5px}
+.go{padding:18px 56px;border-radius:40px;background:#b3262b;color:#fff;font-weight:700;font-size:28px}
+.pad{aspect-ratio:1.5;border-radius:22px;opacity:.5;transition:opacity .1s,transform .1s}.pad.lit{opacity:1;filter:brightness(1.35);transform:scale(1.04)}
+</style>
+<h1>Descubre el PIN 🔐</h1>
+<p>Supera 6 pruebas al azar. Cada una te da un número, pero ¡sin orden!</p>
+<div id="pin"></div><div class="game" id="g"></div>
+<script>
+const PIN=atob('MTcxMjI0'),$=s=>document.querySelector(s),G=$('#g');let A;
+const sh=a=>a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(x=>x[1]);
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const shake=el=>el.animate([{transform:'translateX(-8px)'},{transform:'translateX(8px)'},{transform:'none'}],200);
+const btn=(cls,html,fn,par)=>{const b=document.createElement('button');b.className=cls;b.innerHTML=html;b.onclick=()=>fn(b);par.append(b);return b};
+$('#pin').innerHTML=[...PIN].map(()=>'<span>?</span>').join('');
+const reveal=(n,p)=>{const e=$('#pin').children[n];e.textContent=PIN[p];e.dataset.p=p;e.classList.add('on')}; // el número que da cada prueba va sin orden
+async function sortPin(){ // anima las casillas hasta su posición correcta
+  const row=$('#pin'),sp=[...row.children],x0=sp.map(s=>s.getBoundingClientRect().left);
+  const so=[...sp].sort((a,b)=>a.dataset.p-b.dataset.p);so.forEach(s=>row.append(s));
+  so.forEach((s,i)=>s.animate([{transform:`translate(${x0[sp.indexOf(s)]-s.getBoundingClientRect().left}px,-26px)`},{transform:'translate(0,-26px)',offset:.6},{transform:'none'}],{duration:1600,delay:i*180,easing:'ease-in-out',fill:'backwards'}));
+  await wait(1600+5*180+300)}
+
+function memory(done){ // 1: 10 parejas (20 cartas)
+  A.innerHTML='<div class="grid g5"></div>';const g=A.firstChild;let open=[],found=0,lock=false;
+  const E=['🎄','⭐','🎁','🔔','🎅','🦌','☃️','🍪','🧦','🍬'];
+  sh([...E,...E]).forEach(e=>btn('card','❔',b=>{
+    if(lock||b.dataset.o)return;b.textContent=e;b.dataset.o=1;open.push(b);
+    if(open.length==2){lock=true;const [x,y]=open;open=[];
+      if(x.textContent==y.textContent){x.classList.add('ok');y.classList.add('ok');lock=false;if(++found==10)setTimeout(done,500)}
+      else setTimeout(()=>{[x,y].forEach(c=>{c.textContent='❔';delete c.dataset.o});lock=false},700)}},g))}
+function flake(done){ // 2: copos que se mueven solos
+  A.innerHTML='<p class="big" id="c">0 / 8</p><div class="field"></div>';let n=0;
+  const f=btn('fl','❄️',()=>{n++;$('#c').textContent=n+' / 8';if(n>=8){clearInterval(t);f.remove();setTimeout(done,500)}else mv()},A.querySelector('.field'));
+  const mv=()=>{f.style.left=Math.random()*80+'%';f.style.top=Math.random()*70+'%'};mv();const t=setInterval(mv,950)}
+function order(done){ // 3: 8 regalos, números ocultos, tiempo límite; al fallar se barajan
+  const N=8,T=20000;
+  A.innerHTML='<p class="big" id="m"></p><div class="tbar"><i id="tb"></i></div><div class="grid g4"></div>';
+  const m=$('#m'),tb=$('#tb');let n=1,ok=false,tm;
+  const bs=Array.from({length:N},()=>btn('card','🎁<small></small>',b=>{if(!ok)return;
+    if(b.v==n){b.classList.add('ok');b.disabled=true;if(++n>N){clearTimeout(tm);ok=false;setTimeout(done,500)}}else fail('¡Fallo!')},A.querySelector('.grid')));
+  const deal=()=>sh([...Array(N).keys()].map(i=>i+1)).forEach((v,i)=>{const b=bs[i];b.v=v;b.querySelector('small').textContent=v;b.classList.remove('ok');b.disabled=false});
+  const start=async msg=>{ok=false;n=1;clearTimeout(tm);tb.style.transition='none';tb.style.width='100%';deal();
+    bs.forEach(b=>b.classList.add('show'));m.textContent=(msg+' Memoriza los números…').trim();await wait(3500);
+    bs.forEach(b=>b.classList.remove('show'));ok=true;m.textContent='Toca del 1 al '+N+' antes de que se acabe el tiempo';
+    tb.offsetWidth;tb.style.transition='width '+T+'ms linear';tb.style.width='0';tm=setTimeout(()=>fail('¡Se acabó el tiempo!'),T)};
+  const fail=msg=>{if(!ok)return;ok=false;clearTimeout(tm);shake(A);setTimeout(()=>start(msg+' Los números han cambiado.'),500)};
+  start('')}
+function odd(done){ // 4: el distinto en cuadrículas grandes, con emojis que parpadean
+  const R=[[6,'🎄','🌲'],[7,'⭐','🌟'],[8,'🔔','🛎️']];let r=0,iv;
+  const round=()=>{clearInterval(iv);const [s,a,b]=R[r],k=Math.random()*s*s|0;
+    A.innerHTML=`<p class="big">Encuentra el distinto (${r+1}/3)</p><div class="grid" style="--n:${s};grid-template-columns:repeat(${s},1fr)"></div>`;
+    const cs=[];for(let i=0;i<s*s;i++)cs.push(btn('cell',i==k?b:a,x=>{if(i==k){clearInterval(iv);if(++r==3)done();else round()}else shake(x)},A.querySelector('.grid')));
+    iv=setInterval(()=>cs.forEach(c=>c.style.opacity=Math.random()<.22?0:1),550)};
+  round()}
+function timing(done){ // 5: 6 niveles, zona cada vez más pequeña y barra más rápida
+  const W=[20,16,13,10,8,6];
+  A.innerHTML='<p class="big" id="c">Nivel 1 / 6</p><div class="bar"><div class="zone"></div><div class="mk"></div></div><button class="go" id="y">¡YA!</button>';
+  const mk=$('.mk'),zone=$('.zone');let n=0,x=0,dir=1,zs=0,last=performance.now(),raf;
+  const setZ=()=>{zs=4+Math.random()*(92-W[n]);zone.style.width=W[n]+'%';zone.style.left=zs+'%'};setZ();
+  const loop=t=>{x+=dir*(1+n*.25)*(t-last)/16.7;last=t;if(x>=100){x=100;dir=-1}if(x<=0){x=0;dir=1}mk.style.left=x+'%';raf=requestAnimationFrame(loop)};raf=requestAnimationFrame(loop);
+  $('#y').onclick=()=>{if(x>=zs&&x<=zs+W[n]){n++;if(n==6){cancelAnimationFrame(raf);setTimeout(done,400)}else{$('#c').textContent='Nivel '+(n+1)+' / 6';setZ()}}else shake($('.bar'))}}
+async function simon(done){ // 6: como el original: nivel 1 = 1 color, cada nivel añade uno (hasta 6)
+  A.innerHTML='<p class="big" id="m"></p><div class="grid g2"></div>';
+  const L=6,cols=['#e53935','#43a047','#1e88e5','#fdd835'],seq=Array.from({length:L},()=>Math.random()*4|0);let lv=1,i=0,ok=false;
+  const flash=async k=>{ps[k].classList.add('lit');await wait(380);ps[k].classList.remove('lit')};
+  const play=async()=>{i=0;ok=false;$('#m').textContent=`Nivel ${lv} / ${L} · Mira…`;await wait(900);for(const k of seq.slice(0,lv)){await flash(k);await wait(220)}$('#m').textContent=`Nivel ${lv} / ${L} · ¡Tu turno!`;ok=true};
+  const ps=cols.map((c,k)=>{const p=btn('pad','',()=>{if(!ok)return;flash(k);
+    if(k==seq[i]){if(++i==lv){ok=false;if(lv==L)setTimeout(done,600);else{lv++;setTimeout(play,800)}}}
+    else{ok=false;shake(A);setTimeout(play,600)}},A.querySelector('.grid'));p.style.background=c;return p});
+  play()}
+
+const GAMES=[{t:'PAREJAS',e:'🃏',c:['#7b2ff7','#f107a3'],f:memory},{t:'COPOS',e:'❄️',c:['#00c6ff','#0072ff'],f:flake},{t:'REGALOS',e:'🎁',c:['#f7971e','#ffb300'],f:order},
+  {t:'EL DISTINTO',e:'🔍',c:['#11998e','#38ef7d'],f:odd},{t:'PUNTO EXACTO',e:'🎯',c:['#e52d27','#b31217'],f:timing},{t:'SIMÓN',e:'🎶',c:['#8e2de2','#4a00e0'],f:simon}];
+const card=g=>`<div class="map" style="background:linear-gradient(135deg,${g.c[0]},${g.c[1]})"><span class="ico">${g.e}</span><b>${g.t}</b></div>`;
+async function roulette(t){ // ruleta que pasa por todas las pruebas y frena en la elegida
+  G.innerHTML='<p class="big">Eligiendo prueba…</p><div id="r"></div>';
+  const s=Math.random()*6|0,k=12+(((t-s)%6)+6)%6;
+  for(let j=0;j<=k;j++){$('#r').innerHTML=card(GAMES[(s+j)%6]);await wait(60+Math.pow(j/k,3)*380)}
+  $('#r').firstChild.classList.add('pick');await wait(1500)}
+(async()=>{
+  const ORDER=sh([0,1,2,3,4,5]),P=sh([0,1,2,3,4,5]);
+  for(let n=0;n<6;n++){
+    const gm=GAMES[ORDER[n]];await roulette(ORDER[n]);
+    G.innerHTML=`<h2>${gm.e} ${gm.t} · ${n+1}/6</h2><div id="a"></div>`;A=$('#a');
+    await new Promise(d=>gm.f(d));
+    reveal(n,P[n]);G.innerHTML='<p class="big">¡Muy bien! ✨ Has conseguido un número</p>';await wait(1600)}
+  G.innerHTML='<h2>¡Tienes los 6 números! 🎉</h2><p class="big">Pero están desordenados…</p>';await wait(1800);
+  G.innerHTML='<p class="big">Ordenando… 🔀</p>';await sortPin();
+  G.innerHTML=`<h2>¡Este es tu PIN! 🔐</h2><p class="big"><b>${PIN}</b></p>`})();
+</script>
