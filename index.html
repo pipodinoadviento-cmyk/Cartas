@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="style.css">
 <main id="app" class="cal"></main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js"></script><script src="calendar.js"></script>
+<script src="config.js"></script><script src="calendar.js"></script><script src="games.js"></script>
 <script>
 const sb=supabase.createClient(CFG.url,CFG.key);
 async function load(p){
@@ -20,5 +20,16 @@ function askPin(bad){
   app.innerHTML=`<h1>Calendario protegido</h1><p class="sub">${bad?'PIN incorrecto. Prueba otra vez.':'Escribe el PIN que te han dado.'}</p><form class="pin"><input inputmode="numeric" autocomplete="off" aria-label="PIN"><button>Abrir</button></form>`;
   app.querySelector('form').onsubmit=e=>{e.preventDefault();localStorage.removeItem('pin');load(app.querySelector('input').value.trim())};
 }
-load(localStorage.getItem('pin'));
+async function preview(){ // modo prueba: solo para ti (sesión del editor); muestra todas las cartas, aunque no toque aún
+  app.className='cal';
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){app.innerHTML='<h1>Modo prueba</h1><p class="sub">Entra primero en <a href="admin.html" style="color:inherit">admin.html</a> con tu cuenta (en este mismo navegador) y vuelve a abrir este enlace.</p>';return}
+  const s=await sb.from('settings').select('*').eq('id',1).single(),l=await sb.from('letters').select('*');
+  if(s.error||l.error){app.textContent='Error: '+(s.error||l.error).message;return}
+  renderCalendar(app,{s:s.data,l:l.data.filter(x=>x.body||x.photo||x.audio)},{preview:true});
+  const d=+new URLSearchParams(location.search).get('d');
+  if(d){const b=[...app.querySelectorAll('.env')].find(x=>x.getAttribute('aria-label')=='Sobre '+d+' de diciembre');if(b)b.click()}
+  app.insertAdjacentHTML('afterbegin','<p class="sub" style="background:#b3262b;color:#fff;border-radius:8px;padding:8px">MODO PRUEBA: solo lo ves tú, con todas las cartas abiertas</p>');
+}
+new URLSearchParams(location.search).has('preview')?preview():load(localStorage.getItem('pin'));
 </script>

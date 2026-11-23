@@ -43,7 +43,7 @@ button,.btn{display:inline-flex;align-items:center;min-height:48px;padding:0 18p
 </div></div>
 <div id="prev" hidden><button id="cl">Cerrar vista previa</button><main id="pm"></main></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js"></script><script src="calendar.js"></script>
+<script src="config.js"></script><script src="calendar.js"></script><script src="games.js"></script>
 <script>
 const sb=supabase.createClient(CFG.url,CFG.key),$=i=>document.getElementById(i);
 const F=['recipient','sender','welcome','style','color','year','card24','pin','email_to','admin_email','site_url'];
@@ -85,7 +85,7 @@ $('rec').onclick=async()=>{
   mr.ondataavailable=e=>ch.push(e.data);
   mr.onstop=()=>{s.getTracks().forEach(t=>t.stop());$('rec').textContent='Grabar ahora';setAudio(new Blob(ch,{type:mr.mimeType}))};
   mr.start();$('rec').textContent='Parar y guardar'};
-$('pv').onclick=()=>{$('prev').hidden=false;renderCalendar($('pm'),{s:S||{},l:Object.values(L).filter(has)})};
+$('pv').onclick=()=>{$('prev').hidden=false;renderCalendar($('pm'),{s:S||{},l:Object.values(L).filter(has)},{preview:true})};
 $('cl').onclick=()=>$('prev').hidden=true;
 $('tst').onclick=async()=>{const {data:{session}}=await sb.auth.getSession();st('Enviando prueba…');
   try{const r=await fetch(CFG.mailUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({token:session.access_token,day:cur})});

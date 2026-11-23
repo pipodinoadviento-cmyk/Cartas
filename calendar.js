@@ -4,7 +4,8 @@ const SHAPES=['s','s','bt','s','s','s','aw','s','aw','s','bw','s','at','at','B',
 const media=p=>`${CFG.url}/storage/v1/object/public/media/${p}`;
 const esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // data = {s: ajustes, l: [cartas visibles]}. Los días sin carta visible aparecen bloqueados.
-function renderCalendar(root,{s,l}){
+function renderCalendar(root,{s,l},opt={}){
+  let tok=0;
   const L=Object.fromEntries(l.map(x=>[x.day,x]));
   root.className=`cal ${s.style||'noche'} ${s.color||'rojo'}`;
   root.innerHTML=`<h1>${esc(s.welcome||'Tus 24 cartas')}</h1><p class="sub">Para ${esc(s.recipient||'ti')}, de ${esc(s.sender||'')}</p><div class="grid"></div><dialog><div class="cap"><h2></h2><button class="x" aria-label="Cerrar">×</button></div><div class="b"></div></dialog>`;
@@ -20,7 +21,12 @@ function renderCalendar(root,{s,l}){
       if(!L[d])return b.animate([{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'none'}],220);
       const r=L[d];
       dlg.classList.toggle('gold',d==24);dlg.querySelector('h2').textContent=`${d} de diciembre`;
-      dlg.querySelector('.b').innerHTML=`<div class="txt">${esc(r.body)}</div>`+(r.photo?`<img src="${media(r.photo)}" alt="">`:'')+(r.audio?`<audio controls preload="metadata" src="${media(r.audio)}"></audio>`:'');
+      const body=dlg.querySelector('.b'),my=++tok,key='jg-'+d;
+      const showLetter=()=>{if(my!=tok)return;body.innerHTML=`<div class="txt">${esc(r.body)}</div>`+(r.photo?`<img src="${media(r.photo)}" alt="">`:'')+(r.audio?`<audio controls preload="metadata" src="${media(r.audio)}"></audio>`:'')};
+      let seen=false;try{seen=localStorage.getItem(key)}catch(e){}
+      body.innerHTML='';
+      if(seen||!window.playGame)showLetter();
+      else playGame(d,body,()=>{try{if(!opt.preview)localStorage.setItem(key,1)}catch(e){}showLetter()},opt.preview);
       dlg.showModal();dlg.scrollTop=0;
     };
     grid.append(b);
