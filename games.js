@@ -1,6 +1,7 @@
 // Retos de cada día (se juegan antes de abrir la carta). Ninguno repite los juegos del PIN.
 (()=>{
 const sh=a=>a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(x=>x[1]);
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
 const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const shake=e=>e.animate([{transform:'translateX(-8px)'},{transform:'translateX(8px)'},{transform:'none'}],200);
 const el=(tag,cls,html,par,fn)=>{const e=document.createElement(tag);e.className=cls||'';e.innerHTML=html??'';if(fn)e.onclick=()=>fn(e);if(par)par.append(e);return e};
@@ -63,11 +64,79 @@ hold(b,v,c){const T=[2500,4000][v];let t0=0,raf=0;
   const bt=b.querySelector('.gtap'),bar=b.querySelector('i');
   const step=()=>{const p=Math.min(1,(performance.now()-t0)/T);bar.style.width=p*100+'%';if(p>=1)c.ok();else raf=requestAnimationFrame(step)};
   const stop=()=>{if(!t0)return;cancelAnimationFrame(raf);const ok=bar.style.width=='100%';t0=0;if(!ok){bar.style.width=0;c.fail()}};
-  bt.onpointerdown=e=>{bt.setPointerCapture(e.pointerId);t0=performance.now();step()};bt.onpointerup=bt.onpointercancel=stop;bt.oncontextmenu=e=>e.preventDefault()}
+  bt.onpointerdown=e=>{bt.setPointerCapture(e.pointerId);t0=performance.now();step()};bt.onpointerup=bt.onpointercancel=stop;bt.oncontextmenu=e=>e.preventDefault()},
+// ---- los 6 juegos del PIN, simplificados ----
+pairs(b,v,c){let open=[],found=0,lock=false;b.innerHTML='<p>Encuentra las 4 parejas</p><div class="gg gg4"></div>';const g=b.querySelector('.gg');
+  sh(['🎄','⭐','🎁','🔔','🎄','⭐','🎁','🔔']).forEach(e=>el('button','gtile gcard','❔',g,x=>{
+    if(lock||x.dataset.o)return;x.textContent=e;x.dataset.o=1;open.push(x);
+    if(open.length==2){lock=true;const [p,q]=open;open=[];
+      if(p.textContent==q.textContent){lock=false;if(++found==4)setTimeout(c.ok,400)}
+      else setTimeout(()=>{[p,q].forEach(y=>{y.textContent='❔';delete y.dataset.o});lock=false},700)}}))},
+flake(b,v,c){const N=5;let n=0;b.innerHTML=`<p id="gc">Atrapa los copos: 0 / ${N}</p><div class="gfield"></div>`;
+  const fl=b.querySelector('.gfield'),p=b.querySelector('#gc');
+  const f=el('button','gfl','❄️',fl,()=>{n++;p.textContent=`Atrapa los copos: ${n} / ${N}`;if(n>=N){clearInterval(iv);c.ok()}else mv()});
+  const mv=()=>{f.style.left=Math.random()*75+'%';f.style.top=Math.random()*70+'%'};mv();
+  const iv=setInterval(()=>{if(!f.isConnected)clearInterval(iv);else mv()},1100)},
+gifts(b,v,c){const N=5;let n=1,ok=false;b.innerHTML='<p id="gm"></p><div class="gg gg3"></div>';const m=b.querySelector('#gm'),g=b.querySelector('.gg');
+  const bs=Array.from({length:N},()=>el('button','gtile gcard','🎁<small></small>',g,x=>{if(!ok)return;
+    if(x.v==n){x.classList.add('okk');x.disabled=true;if(++n>N)c.ok()}else{shake(x);c.fail();start()}}));
+  const start=async()=>{ok=false;n=1;sh([...Array(N).keys()].map(i=>i+1)).forEach((q,i)=>{const x=bs[i];x.v=q;x.querySelector('small').textContent=q;x.classList.remove('okk');x.disabled=false;x.classList.add('show')});
+    m.textContent='Memoriza los números…';await wait(2600);bs.forEach(x=>x.classList.remove('show'));ok=true;m.textContent=`Toca del 1 al ${N} en orden`};start()},
+odd(b,v,c){const s=6,k=ri(0,s*s-1);b.innerHTML=`<p>Encuentra el distinto</p><div class="gg" style="--n:${s};grid-template-columns:repeat(${s},1fr)"></div>`;
+  const g=b.querySelector('.gg'),cs=[];for(let i=0;i<s*s;i++)cs.push(el('button','gcell',i==k?'🌲':'🎄',g,x=>{if(i==k){clearInterval(iv);c.ok()}else{shake(x);c.fail()}}));
+  const iv=setInterval(()=>{if(!g.isConnected)return clearInterval(iv);cs.forEach(x=>x.style.opacity=Math.random()<.15?0:1)},600)},
+timing(b,v,c){const W=[22,15,10];let n=0,x=0,dir=1,zs=0,last=performance.now(),raf;
+  b.innerHTML='<p id="gc">Nivel 1 / 3 · Pulsa ¡YA! con la barra en la zona verde</p><div class="gbarz"><div class="gzone"></div><div class="gmk"></div></div><button class="gtap">¡YA!</button>';
+  const mk=b.querySelector('.gmk'),zone=b.querySelector('.gzone'),bt=b.querySelector('.gtap');
+  const setZ=()=>{zs=4+Math.random()*(92-W[n]);zone.style.width=W[n]+'%';zone.style.left=zs+'%'};setZ();
+  const loop=t=>{if(!mk.isConnected)return;x+=dir*(1+n*.3)*(t-last)/16.7;last=t;if(x>=100){x=100;dir=-1}if(x<=0){x=0;dir=1}mk.style.left=x+'%';raf=requestAnimationFrame(loop)};raf=requestAnimationFrame(loop);
+  bt.onclick=()=>{if(x>=zs&&x<=zs+W[n]){if(++n==3){cancelAnimationFrame(raf);c.ok()}else{b.querySelector('#gc').textContent=`Nivel ${n+1} / 3 · Pulsa ¡YA! con la barra en la zona verde`;setZ()}}else{shake(b.querySelector('.gbarz'));c.fail()}}},
+simon(b,v,c){const LEN=5,cols=['#e53935','#43a047','#1e88e5','#fdd835'],seq=Array.from({length:LEN},()=>ri(0,3));let i=0,ok=false; // directo al último nivel
+  b.innerHTML='<p id="gm"></p><div class="gg gg2"></div>';const m=b.querySelector('#gm');
+  const flash=async k=>{ps[k].classList.add('lit');await wait(380);ps[k].classList.remove('lit')};
+  const play=async()=>{i=0;ok=false;m.textContent='Mira la secuencia…';await wait(900);for(const k of seq){if(!m.isConnected)return;await flash(k);await wait(220)}m.textContent='¡Tu turno! Repítela';ok=true};
+  const ps=cols.map((col,k)=>{const p=el('button','gpad','',b.querySelector('.gg'),()=>{if(!ok)return;flash(k);
+    if(k==seq[i]){if(++i==LEN){ok=false;setTimeout(c.ok,500)}}else{ok=false;shake(b);c.fail();setTimeout(play,700)}});p.style.background=col;return p});
+  play()},
+// ---- retos nuevos ----
+react(b,v,c){let n=0,st=0,to,lock=false;b.innerHTML='<p>Espera a que se ponga en verde y toca lo más rápido que puedas (3 veces)</p><button class="gtap"></button>';const bt=b.querySelector('.gtap');
+  const arm=()=>{lock=false;st=0;bt.style.background='#c62828';bt.textContent='Espera… 🔴';to=setTimeout(()=>{bt.style.background='#2e7d32';bt.textContent='¡YA! 🟢';st=Date.now()},ri(1200,3200))};
+  bt.onclick=()=>{if(lock)return;lock=true;
+    if(!st){clearTimeout(to);c.fail();bt.textContent='¡Demasiado pronto!';return void setTimeout(arm,900)}
+    if(Date.now()-st>1000){c.fail();bt.textContent='¡Muy lento!';return void setTimeout(arm,900)}
+    if(++n==3)return c.ok();bt.textContent=`¡Bien! ${n} / 3`;setTimeout(arm,800)};arm()},
+guess(b,v,c){const t=ri(1,30);let tries=0;
+  b.innerHTML='<p>Estoy pensando un número del 1 al 30. ¿Cuál es? Te diré si es más alto o más bajo.</p><div class="gwrd" id="gh" style="font-size:40px">?</div><input class="gin" type="number" inputmode="numeric" min="1" max="30"> <button class="gbtn row">Probar</button>';
+  const inp=b.querySelector('input'),h=b.querySelector('#gh');
+  b.querySelector('button').onclick=()=>{const n=+inp.value;if(!n)return;tries++;if(n==t)return c.ok();h.textContent=n<t?'⬆️ Más alto':'⬇️ Más bajo';inp.value='';if(tries>=6)c.fail()}},
+shadow(b,v,c){const E=['🎅','🦌','⛄','🎄','🔔','🎁','⭐','🧦'];let n=0;
+  const go=()=>{if(n++==3)return c.ok();const t=sh(E).slice(0,4),a=t[0];
+    b.innerHTML=`<p>¿De quién es esta sombra? (${n}/3)</p><div class="gwrd" style="filter:brightness(0);font-size:110px">${a}</div><div class="gl"></div>`;
+    sh(t).forEach(e=>el('button','gbtn row big',e,b.querySelector('.gl'),x=>{if(e==a)go();else{shake(x);c.fail()}}))};go()},
+pattern(b,v,c){const Q=sh([[2,4,6,8],[5,10,15,20],[1,3,5,7],[3,6,9,12],[10,20,30,40],[1,2,4,8]]).slice(0,3);let n=0;
+  const go=()=>{if(n==3)return c.ok();const s=Q[n++],a=s[3],bad=[a+1,a-1,a+2,a+5].filter(z=>z>0&&z!=a).slice(0,3);
+    choice(b,`¿Qué número sigue? (${n}/3)<br><b style="font-size:34px">${s.slice(0,3).join(', ')}, ?</b>`,[a,...bad].map(String),c,go)};go()},
+sort(b,v,c){const L=sh([['🎄','N'],['⛄','N'],['🎅','N'],['🎁','N'],['🌴','V'],['🍦','V'],['🕶️','V'],['🍉','V']]).slice(0,6);let n=0;
+  const go=()=>{if(n==6)return c.ok();const [e,k]=L[n];b.innerHTML=`<p>¿Es de Navidad o de verano? (${n+1}/6)</p><div class="gwrd">${e}</div>`;
+    [['🎄 Navidad','N'],['☀️ Verano','V']].forEach(([t,kk])=>el('button','gbtn row',t,b,x=>{if(kk==k){n++;go()}else{shake(x);c.fail()}}))};go()},
+colors(b,v,c){const C=['#e53935','#43a047','#1e88e5','#fdd835'];let tg;do tg=[0,0,0,0].map(()=>ri(0,3));while(tg.every(x=>x==0));const cur=[0,0,0,0];
+  b.innerHTML='<p>Modelo:</p><div class="gdots"></div><p>Toca tus círculos para cambiar el color hasta igualar el modelo:</p><div class="gdots"></div>';
+  const [m,mi]=b.querySelectorAll('.gdots');tg.forEach(x=>{el('span','gdot','',m).style.background=C[x]});
+  cur.forEach((_,i)=>{const d=el('button','gdot','',mi,()=>{cur[i]=(cur[i]+1)%4;d.style.background=C[cur[i]];if(cur.every((y,j)=>y==tg[j]))setTimeout(c.ok,300)});d.style.background=C[0]})},
+ttt(b,v,c){let B=Array(9).fill(''),over=false;const W=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  const win=p=>W.some(l=>l.every(i=>B[i]==p));
+  b.innerHTML='<p>Tres en raya: tú eres ❌. Gana al móvil (⭕ juega al azar).</p><div class="gg gg3"></div>';const g=b.querySelector('.gg');
+  const reset=()=>{B=Array(9).fill('');over=false;draw()};
+  const draw=()=>{g.innerHTML='';B.forEach((x,i)=>el('button','gtile',x,g,()=>{if(over||B[i])return;B[i]='❌';
+    if(win('❌'))return c.ok();
+    const f=B.map((y,j)=>y?-1:j).filter(j=>j>=0);
+    if(f.length)B[f[ri(0,f.length-1)]]='⭕';
+    if(win('⭕')||!B.includes('')){over=true;c.fail();draw();return void setTimeout(reset,900)}
+    draw()}))};draw()}
 };
-// Reto de cada día (1..24): [juego, variante]
-const SPEC=[['scratch',0],['trivia',0],['anagram',0],['count',0],['drag',0],['math',0],['slider',0],['tap',0],['stroop',0],['swap',0],['hold',0],['scratch',1],
- ['trivia',1],['anagram',1],['count',1],['drag',1],['math',1],['slider',1],['tap',1],['stroop',1],['swap',1],['hold',1],['trivia',2],['scratch',2]];
+// Reto de cada día (1..24): [juego, variante]. 24 retos distintos, ninguno se repite
+const SPEC=[['trivia',0],['pairs',0],['math',0],['flake',0],['anagram',0],['react',0],['count',0],['pattern',0],['drag',0],['gifts',0],['stroop',0],['shadow',0],
+ ['slider',0],['odd',0],['swap',0],['guess',0],['tap',0],['sort',0],['timing',0],['hold',0],['colors',0],['simon',0],['ttt',0],['scratch',1]];
 // preview=true: el botón de saltar sale desde el principio (modo prueba / vista previa)
 window.playGame=(day,box,done,preview)=>{
   const [k,v]=SPEC[day-1];let fails=0,fin=false,t;
