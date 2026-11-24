@@ -54,3 +54,5 @@ dialog audio{width:calc(100% - 48px);margin:0 24px 24px}
 .gg2{grid-template-columns:repeat(2,1fr)}.gpad{aspect-ratio:1.6;border-radius:20px;border:0;opacity:.5;transition:opacity .1s,transform .1s;touch-action:manipulation}.gpad.lit{opacity:1;filter:brightness(1.35);transform:scale(1.04)}
 .gbtn.big{font-size:40px}.gin{font:700 32px Fraunces,serif;width:140px;padding:10px;border-radius:12px;border:2px solid #0003;text-align:center}
 .gdots{display:flex;gap:16px;justify-content:center;margin:8px 0 18px}.gdot{width:72px;height:72px;border-radius:50%;border:4px solid #0003;display:inline-block;padding:0;touch-action:manipulation}
+.pdfbar{text-align:center;margin:30px auto 0;max-width:1180px}.pdfbar .pdfbtn{padding:18px 38px;border-radius:40px;border:0;background:var(--c);color:#fff;font:700 24px Fraunces,serif;cursor:pointer;touch-action:manipulation}
+.pdfbtn:disabled{opacity:.6}.pdfst{margin:10px 0 0;font-size:18px}dialog .pdfbar{margin:0 0 26px}

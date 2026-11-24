@@ -1,0 +1,15 @@
+<!doctype html><html lang="es"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Nota de voz</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;min-height:100dvh;display:grid;place-items:center;background:#101a1f;color:#f6ecde;font:20px/1.4 Fraunces,Georgia,serif;text-align:center;padding:24px}
+.c{background:#fdf8ee;color:#2a2018;border-radius:24px;padding:36px;max-width:560px;width:100%;box-shadow:0 10px 40px #0008}
+h1{font-size:34px;margin:.2em 0;color:#b3262b}.e{font-size:68px}audio{width:100%;margin-top:22px}
+</style>
+<div class="c"><div class="e">🎧</div><h1 id="t">Nota de voz</h1><p>Dale al play 💌</p><audio id="a" controls preload="auto"></audio></div>
+<script src="config.js"></script>
+<script>
+const q=new URLSearchParams(location.search),f=q.get('f')||'',d=+q.get('d');
+if(!/^[0-9a-f-]{36}\.[a-z0-9]{2,4}$/i.test(f))document.body.textContent='Enlace no válido';
+else{document.getElementById('a').src=CFG.url+'/storage/v1/object/public/media/'+f;if(d>=1&&d<=24)document.getElementById('t').textContent='Nota de voz del '+d+' de diciembre'}
+</script>
