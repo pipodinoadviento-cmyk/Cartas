@@ -2,6 +2,10 @@
 (()=>{
 const sh=a=>a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(x=>x[1]);
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const confetti=host=>{const w=document.createElement('div'),C=['#e53935','#43a047','#1e88e5','#fdd835','#ab47bc','#ff7043'];w.className='cfw';
+  for(let i=0;i<60;i++){const e=document.createElement('i');e.className='cf';e.style.left=Math.random()*100+'%';e.style.background=C[i%6];e.style.animationDelay=Math.random()*.5+'s';
+    e.style.setProperty('--x',(Math.random()*240-120)+'px');e.style.setProperty('--r',(360+Math.random()*540)+'deg');w.append(e)}
+  host.append(w);setTimeout(()=>w.remove(),3200)};
 const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const shake=e=>e.animate([{transform:'translateX(-8px)'},{transform:'translateX(8px)'},{transform:'none'}],200);
 const el=(tag,cls,html,par,fn)=>{const e=document.createElement(tag);e.className=cls||'';e.innerHTML=html??'';if(fn)e.onclick=()=>fn(e);if(par)par.append(e);return e};
@@ -142,7 +146,7 @@ window.playGame=(day,box,done,preview)=>{
   const [k,v]=SPEC[day-1];let fails=0,fin=false,t;
   box.innerHTML='<p class="gt">Antes de abrir el sobre, un pequeño reto…</p><div class="gb"></div><button class="gskip" hidden>Saltar reto →</button>';
   const area=box.querySelector('.gb'),sk=box.querySelector('.gskip');
-  const end=msg=>{if(fin)return;fin=true;clearTimeout(t);if(msg){box.innerHTML='<p class="gt">✨ ¡Superado!</p>';setTimeout(done,700)}else done()};
+  const end=msg=>{if(fin)return;fin=true;clearTimeout(t);if(msg){box.innerHTML='<p class="gt">✨ ¡Superado!</p>';confetti(box.closest('dialog')||document.body);setTimeout(done,1100)}else done()};
   const ctx={ok:()=>end(true),fail:()=>{if(++fails>=3)sk.hidden=false}};
   sk.onclick=()=>end(false);t=setTimeout(()=>sk.hidden=false,25000);if(preview)sk.hidden=false;
   G[k](area,v,ctx)};

@@ -39,6 +39,9 @@ button,.btn{display:inline-flex;align-items:center;min-height:48px;padding:0 18p
 <div class="box"><b>Foto</b><div id="ph"></div><label class="btn">Añadir foto<input id="pf" type="file" accept="image/*" hidden></label> <button class="alt" id="pd">Quitar</button></div>
 <div class="box"><b>Nota de voz</b> <small>(graba desde el iPad/Safari para que suene en todos los dispositivos)</small><div id="au"></div>
 <button id="rec">Grabar ahora</button> <label class="btn alt">Subir audio<input id="af" type="file" accept="audio/*" hidden></label> <button class="alt" id="ad">Quitar</button></div>
+<details class="box"><summary><b>Correo de este día (opcional)</b></summary>
+<label>Asunto</label><input id="esub" placeholder="(por defecto: «Tienes el sobre N de …»; los días 1 y 24 tienen uno especial)">
+<label>Texto del correo</label><textarea id="etxt" style="min-height:160px;font:17px/1.5 Georgia,serif" placeholder="Si lo dejas vacío se usa el texto por defecto. Puedes usar {nombre}, {firma} y {dia}. Separa los párrafos con una línea en blanco."></textarea></details>
 <div class="row"><button id="tst">Enviarme este día de prueba por correo</button></div></section>
 </div></div>
 <div id="prev" hidden><button id="cl">Cerrar vista previa</button><main id="pm"></main></div>
@@ -68,10 +71,12 @@ $('go').onclick=async()=>{const {error}=await sb.auth.signInWithPassword({email:
 $('out').onclick=async()=>{await sb.auth.signOut();location.reload()};
 F.forEach(f=>$(f).onchange=async()=>{const v=f=='year'?+$(f).value:$(f).value;S[f]=v;st('Guardando…');const {error}=await sb.from('settings').upsert({id:1,[f]:v});st(error?error.message:'Guardado')});
 function nav(){$('days').innerHTML='';for(let d=1;d<=24;d++){const b=document.createElement('button');b.textContent=d;b.className=(has(L[d])?'on ':'')+(d==cur?'cur':'');b.onclick=()=>show(d);$('days').append(b)}}
-function show(d){cur=d;const r=L[d]=L[d]||{day:d};$('dt').textContent=d+' de diciembre';$('body').value=r.body||'';
+function show(d){cur=d;const r=L[d]=L[d]||{day:d};$('dt').textContent=d+' de diciembre';$('esub').value=r.email_subject||'';$('etxt').value=r.email_text||'';$('body').value=r.body||'';
   $('ph').innerHTML=r.photo?`<img src="${media(r.photo)}" onerror="this.replaceWith('⚠️ No se puede cargar la foto (¿el bucket media es público?)')">`:'';$('au').innerHTML=r.audio?`<audio controls src="${media(r.audio)}"></audio>`:'';nav()}
-async function saveL(){st('Guardando…');const r=L[cur];const {error}=await sb.from('letters').upsert({day:cur,body:r.body||'',photo:r.photo||null,audio:r.audio||null});st(error?error.message:'Guardado');nav()}
+async function saveL(){st('Guardando…');const r=L[cur],pl={day:cur,body:r.body||'',photo:r.photo||null,audio:r.audio||null};if(r.email_subject!==undefined)pl.email_subject=r.email_subject||null;if(r.email_text!==undefined)pl.email_text=r.email_text||null;const {error}=await sb.from('letters').upsert(pl);st(error?error.message:'Guardado');nav()}
 $('body').oninput=()=>{L[cur].body=$('body').value;clearTimeout(tm);tm=setTimeout(saveL,800)};
+$('esub').oninput=()=>{L[cur].email_subject=$('esub').value;clearTimeout(tm);tm=setTimeout(saveL,800)};
+$('etxt').oninput=()=>{L[cur].email_text=$('etxt').value;clearTimeout(tm);tm=setTimeout(saveL,800)};
 async function up(blob,ext){const p=`${crypto.randomUUID()}.${ext}`;const {error}=await sb.storage.from('media').upload(p,blob,{contentType:blob.type});if(error){alert(error.message);throw error}return p}
 const shrink=f=>new Promise(r=>{const i=new Image();i.onload=()=>{const k=Math.min(1,1600/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);c.toBlob(r,'image/jpeg',.85)};i.src=URL.createObjectURL(f)});
 $('pf').onchange=async e=>{const f=e.target.files[0];if(!f)return;st('Subiendo foto…');L[cur].photo=await up(await shrink(f),'jpg');await saveL();show(cur)};
