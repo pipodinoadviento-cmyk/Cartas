@@ -1,0 +1,19 @@
+name: Mantener Supabase Activo
+
+on:
+  schedule:
+    # Se ejecuta a las 09:00 UTC cada 5 días
+    - cron: '0 9 */5 * *'
+  workflow_dispatch:
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consultar función public_calendar en Supabase
+        run: |
+          curl -f -s -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/rpc/public_calendar" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"p": null}'
